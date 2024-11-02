@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <script src="~/lib/jquery/dist/jquery.js"></script>
+
+
+    <style>
+        table a,
+        table img {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+
+
+        <!-- Left Column (id="1") -->
+        <div class="row">
+            <div>
+                <table class="table table-sm table-striped table-bordered m-2" id="getListEnployee">
+                 
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            // trong - doc - ngang
+                // Gửi yêu cầu AJAX để lấy thông tin lịch chiếu phim từ API getMovie
+                $.ajax({
+                url: `http://localhost:5100/api/Skill/List`,
+                    type: "GET",
+                    success: function (skill) {
+                    console.log("employeeskills data:", skill);
+
+                        // Gửi yêu cầu AJAX để lấy thông tin về các phòng chiếu từ API getRoom
+                        $.ajax({
+                        url: "http://localhost:5100/api/Employee/List",
+                            type: "GET",
+                            success: function (emp) {
+                            console.log("Employee data:", emp);
+
+                                // Gửi yêu cầu AJAX để lấy thông tin về các khoảng thời gian từ API GetTimeSlot
+                                $.ajax({
+                                url: "http://localhost:5100/api/EmployeeSkill/List",
+                                    type: "GET",
+                                    success: function (employeeskills) {
+                                    console.log("List Skill:", employeeskills);
+
+                                        // Cập nhật bảng lịch chiếu phim trên trang web
+                                    updateScheduleTable(employeeskills, emp, skill);
+                                    },
+                                    error: function (error) {
+                                        console.error("Error fetching time slot data:", error);
+                                    }
+                                });
+                            },
+                            error: function (error) {
+                                console.error("Error fetching room data:", error);
+                            }
+                        });
+                    },
+                    error: function (error) {
+                        console.error("Error fetching movie data:", error);
+                    }
+                });
+
+            function updateScheduleTable(employeeskills, emp, skill) {
+                var table = $("#getListEnployee");
+                table.empty(); // Xóa nội dung của bảng trước khi cập nhật
+
+                // Tạo hàng đầu tiên với các giờ chiếu
+                var headerRow = "<tr><th></th>";
+                for (var i = 0; i < skill.length; i++) {
+                    headerRow += `<th>${skill[i].skillName}</th>`;
+                }
+                headerRow += "</tr>";
+                table.append(headerRow);
+
+                // Tạo các hàng cho từng phòng chiếu và các phim
+                for (var i = 0; i < emp.length; i++) {
+                    var employee = emp[i];
+
+                    // Tạo một hàng cho thông tin phòng chiếu
+                    var roomRow = `<tr><td>${employee.name}</td>`;
+
+                    for (var j = 0; j < skill.length; j++) {
+                        var item = skill[j];
+
+                        // Tìm các lịch chiếu phim trong phòng và thời gian này
+                        var screenings = employeeskills.filter(function (sk) {
+                            // console.log("skill.skillId : " + sk.skillId);
+                            // console.log("employee.skillId : " + item.skillId);
+                            // console.log("skill.employeeId : " + sk.employeeId);
+                            // console.log("employee.employeeId : " + employee.employeeId);
+
+                            return sk.skillId === item.skillId && sk.employeeId === employee.employeeId;
+                        });
+
+
+                        // Tạo chuỗi HTML cho các lịch chiếu phim trong thời gian này
+                        var screeningsHtml = "";
+                        for (var k = 0; k < screenings.length; k++) {
+                            console.log(screenings)
+                            var screening = screenings[k];
+                            screeningsHtml += `<a href="#" >${screening.proficiencyLevel}</a><br>`;
+                        }
+
+                        // Thêm thông tin lịch chiếu phim vào hàng
+                        roomRow += `<td>${screeningsHtml}</td>`;
+                    }
+                    roomRow += "</tr>";
+                    table.append(roomRow);
+                }
+            }
+
+
+
+        });
+
+        function showMovieDetail(movieId) {
+            $.ajax({
+                url: `http://localhost:5270/api/Movie/GetMovies?$filter=id eq ${movieId}`,
+                type: "GET",
+                success: function (response) {
+                    var detailContent = "";
+                    response.forEach(function (movie) {
+                        // Thêm thông tin của mỗi bộ phim vào biến detailContent
+                        detailContent += `ID: ${movie.id}<br>
+                                      Title: ${movie.title}<br>
+                                      Year: ${movie.year}<br>
+                                      Description: ${movie.description}<br>
+                                      Director: ${movie.directorName}<br>
+                                      Director ID: ${movie.directorId}<br>
+                                      Movie Stars: ${movie.movieStars.join(", ")}<br>
+                                      -----------------------<br>`;
+                    });
+
+                    // Gán nội dung chi tiết vào phần tử HTML
+                    document.getElementById("getDetail").innerHTML = detailContent;
+                },
+                error: function (error) {
+                    console.error("Error fetching movie data:", error);
+                }
+            });
+
+
+
+        }
+
+
+    </script>
+</body>
+
+</html>

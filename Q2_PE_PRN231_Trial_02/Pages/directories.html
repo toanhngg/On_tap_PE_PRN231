@@ -1,0 +1,166 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link href="lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <script src="lib/jquery/dist/jquery.js"></script>
+    <title>Search Directors</title>
+</head>
+<body style="margin-left: 30px; margin-right:30px;">
+    <h1>Search Directors</h1>
+    <div>
+        <input name="national" id="national" placeholder="Nationality" />
+        <input name="gender" id="gender" placeholder="Gender" />
+        <input type="submit" value="Search" id="searchBtn" style="background-color:cornflowerblue;" />
+    </div>
+    <br />
+    <div>
+        <div class="row">
+            <div>
+                <table class="table table-sm table-striped table-bordered m-2">
+                    <thead>
+                        <tr>
+                            <th>DirectorId</th>
+                            <th>FullName</th>
+                            <th>Gender</th>
+                            <th>Dob</th>
+                            <th>Description</th>
+                            <th>Nationality</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="getDirectors"></tbody>
+                </table>
+            </div>
+            <!-- Right Column (id="2") -->
+            <div class="col-md-4">
+                <div>
+                    <p id="getDetail"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function () {
+            $("#searchBtn").click(function () {
+                var national = $("#national").val();
+                var gender = $("#gender").val();
+                $.ajax({
+                    url: `http://localhost:5000/api/Director/GetDirectors/${national}/${gender}`,
+                    type: "GET",
+                    success: function (response) {
+                        console.log(response);
+                        viewTable(response);
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                });
+            });
+
+            function viewTable(data) {
+                var tableApend = $("#getDirectors");
+                tableApend.empty();
+                console.log(data);
+
+                data.forEach(function (director) {
+                    tableApend.append(`
+                            <tr id="${director.id}">
+                                <td>${director.id}</td>
+                                <td>${director.fullName}</td>
+                                <td>${director.gender}</td>
+                                <td>${director.dobString}</td>
+                                <td>${director.description}</td>
+                                <td>${director.nationality}</td>
+                                <td>
+                                    <button class="detailBtn" data-index="${director.id}">Detail</button>
+                                </td>
+                                <td>
+                                    <button class="deleteBtn" data-index="${director.id}">Delete</button>
+                                </td>
+                            </tr>
+                        `);
+                });
+
+                $(".detailBtn").click(function () {
+                    var index = $(this).data("index");
+                    getDetail(index);
+                    console.log("Detail button clicked for index:", index);
+                });
+
+                $(".deleteBtn").click(function () {
+                    var index = $(this).data("index");
+                    removeDirector(index);
+                    console.log("Delete clicked for index:", index);
+                });
+            }
+
+            function getDetail(id) {
+                console.log(`http://localhost:5000/api/Director/GetDirectors/${id}`);
+                $.ajax({
+                    url: `http://localhost:5000/api/Director/GetDirectors/${id}`,
+                    type: "GET",
+                    success: function (response) {
+                        console.log(response);
+
+                        // Call a function to update the table with the received data
+                        var fullName = response.fullName;
+
+                        // Construct the content
+                        var detailContent = `List of movies for ${fullName}:<br>`;
+
+                        // Assuming 'response.movies' is an array of movies
+                        response.movies.forEach(function (movie) {
+                            var title = movie.title;
+                            var releaseDate = new Date(movie.releaseDate).getFullYear();
+
+                            detailContent += `${title} - Release year: ${releaseDate}<br>`;
+                        });
+                        // Set the value for the <p> element
+                        document.getElementById("getDetail").innerHTML = detailContent;
+                    },
+                    error: function (error) {
+                        console.error(error);
+                    }
+                });
+            }
+
+            function removeDirector(directorId) {
+                $.ajax({
+                    url: `http://localhost:5000/api/Director/GetDirectors/${directorId}`,
+                    type: "GET",
+                    success: function (response) {
+                        response.movies.forEach(function (movie) {
+                            $.ajax({
+                                url: `http://localhost:5000/api/Movie/GetStar?movieId=${movie.movieId}`,
+                                type: "GET",
+                                success: function (starResponse) {
+                                    starResponse.forEach(function (star) {
+                                        $.ajax({
+                                            url: `http://localhost:5000/api/Movie/RemoveStarFromMovie/${movie.movieId}/${star.id}`,
+                                            type: "DELETE",
+                                            success: function (removeResponse) {
+                                                console.log(removeResponse);
+                                                $('#' + directorId).remove();
+                                            },
+                                            error: function (error) {
+                                                console.error(error);
+                                            }
+                                        });
+                                    });
+                                },
+                                error: function (error) {
+                                    console.error(error);
+                                }
+                            });
+                        });
+                    },
+                    error: function (error) {
+                        console.error("sai r");
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
